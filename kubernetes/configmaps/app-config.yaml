@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: kubedeploy
+  labels:
+    app: kubedeploy
+data:
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "userdb"
+  DATABASE_SSL_MODE: "disable"
+  USER_SERVICE_HTTP_PORT: "8080"
+  USER_SERVICE_GRPC_PORT: "9091"
+  PAYMENT_SERVICE_PORT: "8081"
+  KRAKEND_PORT: "8000"
+  USER_SERVICE_GRPC_ADDR: "user-service:9091"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: krakend-config
+  namespace: kubedeploy
+  labels:
+    app: krakend
+data:
+  krakend.json: |
+    {
+      "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+      "version": 3,
+      "name": "Kubedeploy EKS API Gateway",
+      "timeout": "3000ms",
+      "cache_ttl": "300s",
+      "port": 8000,
+      "host": ["http://krakend-service:8000"],
+      "extra_config": {
+        "router": {
+          "auto_options": true
+        },
+        "security/cors": {
+          "allow_origins": ["*"],
+          "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+          "allow_headers": ["Content-Type", "Authorization"],
+          "expose_headers": ["Content-Length"],
+          "max_age": "12h"
+        }
+      },
+      "endpoints": [
+        {
+          "endpoint": "/health",
+          "method": "GET",
+          "output_encoding": "json",
+          "backend": [
+            {
+              "url_pattern": "/health",
+              "encoding": "json",
+              "method": "GET",
+              "host": ["http://user-service:8080"]
+            }
+          ]
+        },
+        {
+          "endpoint": "/api/users",
+          "method": "GET",
+          "output_encoding": "json",
+          "backend": [
+            {
+              "url_pattern": "/users",
+              "encoding": "json",
+              "method": "GET",
+              "host": ["http://user-service:8080"]
+            }
+          ]
+        },
+        {
+          "endpoint": "/api/users",
+          "method": "POST",
+          "output_encoding": "json",
+          "backend": [
+            {
+              "url_pattern": "/users",
+              "encoding": "json",
+              "method": "POST",
+              "host": ["http://user-service:8080"]
+            }
+          ]
+        },
+        {
+          "endpoint": "/api/payments",
+          "method": "GET",
+          "output_encoding": "json",
+          "backend": [
+            {
+              "url_pattern": "/payments",
+              "encoding": "json",
+              "method": "GET",
+              "host": ["http://payment-service:8081"]
+            }
+          ]
+        },
+        {
+          "endpoint": "/api/payments",
+          "method": "POST",
+          "output_encoding": "json",
+          "backend": [
+            {
+              "url_pattern": "/payments",
+              "encoding": "json",
+              "method": "POST",
+              "host": ["http://payment-service:8081"]
+            }
+          ]
+        }
+      ]
+    }

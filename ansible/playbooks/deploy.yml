@@ -1,0 +1,85 @@
+---
+- name: Deploy Kubedeploy EKS Application
+  hosts: localhost
+  gather_facts: false
+  vars:
+    kubeconfig_path: "~/.kube/config"
+    
+  tasks:
+    - name: Check if kubectl is installed
+      command: kubectl version --client
+      register: kubectl_version
+      failed_when: false
+      changed_when: false
+
+    - name: Install kubectl if not present
+      include_role:
+        name: common
+        tasks_from: install_kubectl
+      when: kubectl_version.rc != 0
+
+    - name: Update kubeconfig for EKS cluster
+      shell: |
+        aws eks update-kubeconfig --region {{ aws_region }} --name {{ cluster_name }}
+      register: kubeconfig_update
+      changed_when: "'Updated context' in kubeconfig_update.stdout"
+
+    - name: Verify cluster connectivity
+      k8s_info:
+        api_version: v1
+        kind: Node
+      register: cluster_nodes
+
+    - name: Display cluster information
+      debug:
+        msg: "Connected to EKS cluster '{{ cluster_name }}' with {{ cluster_nodes.resources | length }} nodes"
+
+    - name: Deploy Kubernetes resources
+      include_role:
+        name: kubernetes
+
+    - name: Setup monitoring (if enabled)
+      include_role:
+        name: monitoring
+      when: enable_monitoring | default(false)
+
+    - name: Wait for application to be ready
+      k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        namespace: "{{ app_namespace }}"
+        name: "{{ item }}"
+        wait: true
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+      loop:
+        - user-service
+        - payment-service
+        - krakend
+        - postgres
+
+    - name: Get service endpoints
+      k8s_info:
+        api_version: v1
+        kind: Service
+        namespace: "{{ app_namespace }}"
+        name: krakend-service
+      register: krakend_service
+
+    - name: Display application endpoints
+      debug:
+        msg: |
+          Application deployed successfully!
+          
+          Endpoints:
+          {% if krakend_service.resources[0].status.loadBalancer.ingress is defined %}
+          - API Gateway: http://{{ krakend_service.resources[0].status.loadBalancer.ingress[0].hostname }}:8000
+          {% else %}
+          - API Gateway: Service is being provisioned...
+          {% endif %}
+          
+          Health check:
+          kubectl get pods -n {{ app_namespace }}
+          kubectl get services -n {{ app_namespace }}

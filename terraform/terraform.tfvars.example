@@ -1,0 +1,23 @@
+# EKS Cluster Configuration
+cluster_name    = "kubedeploy-eks"
+cluster_version = "1.28"
+region          = "us-west-2"
+environment     = "dev"
+
+# VPC Configuration
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-west-2a", "us-west-2b", "us-west-2c"]
+
+# Node Group Configuration
+node_group_desired_size = 2
+node_group_max_size     = 5
+node_group_min_size     = 1
+node_instance_types     = ["t3.medium"]
+
+# Tags
+tags = {
+  Environment = "dev"
+  Project     = "kubedeploy-eks"
+  ManagedBy   = "terraform"
+  Team        = "devops"
+}

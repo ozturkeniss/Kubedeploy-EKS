@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: kubedeploy-postgres
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - kubedeploy-network
+
+  # User Service
+  user-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.user
+    container_name: kubedeploy-user-service
+    ports:
+      - "8080:8080"
+      - "9091:9091"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/userdb?sslmode=disable
+      - PORT=8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - kubedeploy-network
+    restart: unless-stopped
+
+  # Payment Service
+  payment-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.payment
+    container_name: kubedeploy-payment-service
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/userdb?sslmode=disable
+      - PORT=8081
+      - USER_SERVICE_GRPC=user-service:9091
+    depends_on:
+      - postgres
+      - user-service
+    networks:
+      - kubedeploy-network
+    restart: unless-stopped
+
+  # API Gateway (KrakenD)
+  api-gateway:
+    image: devopsfaith/krakend:2.7.1
+    container_name: kubedeploy-api-gateway
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./krakend/krakend.json:/etc/krakend/krakend.json:ro
+    command: ["run", "-d", "-c", "/etc/krakend/krakend.json"]
+    depends_on:
+      - user-service
+      - payment-service
+    networks:
+      - kubedeploy-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  kubedeploy-network:
+    driver: bridge

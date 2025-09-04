@@ -1,0 +1,73 @@
+---
+- name: Create namespace
+  k8s:
+    name: "{{ app_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+
+- name: Apply ConfigMaps
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/configmaps/app-config.yaml') | from_yaml_all | list }}"
+
+- name: Apply Secrets
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/secrets/database-secret.yaml') | from_yaml_all | list }}"
+
+- name: Deploy PostgreSQL
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/deployments/postgres.yaml') | from_yaml_all | list }}"
+
+- name: Wait for PostgreSQL to be ready
+  k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ app_namespace }}"
+    name: postgres
+    wait: true
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 300
+
+- name: Deploy User Service
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/deployments/user-service.yaml') | from_yaml_all | list }}"
+
+- name: Deploy Payment Service
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/deployments/payment-service.yaml') | from_yaml_all | list }}"
+
+- name: Deploy KrakenD API Gateway
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/deployments/krakend.yaml') | from_yaml_all | list }}"
+
+- name: Apply Services
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/services/services.yaml') | from_yaml_all | list }}"
+
+- name: Apply Ingress (if enabled)
+  k8s:
+    state: present
+    definition: "{{ lookup('file', '../../kubernetes/ingress/ingress.yaml') | from_yaml_all | list }}"
+  when: enable_ingress | default(false)
+
+- name: Label namespace for monitoring
+  k8s:
+    state: present
+    api_version: v1
+    kind: Namespace
+    name: "{{ app_namespace }}"
+    definition:
+      metadata:
+        labels:
+          monitoring: enabled
+          environment: "{{ environment }}"
+  when: enable_monitoring | default(false)

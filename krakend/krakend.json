@@ -1,0 +1,239 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "version": 3,
+  "name": "Kubedeploy EKS API Gateway",
+  "timeout": "3000ms",
+  "cache_ttl": "300s",
+  "port": 8000,
+  "host": ["http://localhost:8000"],
+  "extra_config": {
+    "router": {
+      "auto_options": true
+    },
+    "security/cors": {
+      "allow_origins": ["*"],
+      "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allow_headers": ["Content-Type", "Authorization"],
+      "expose_headers": ["Content-Length"],
+      "max_age": "12h"
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/health",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/health",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://user-service:8080"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/users",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://user-service:8080"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/users",
+      "method": "POST",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users",
+          "encoding": "json",
+          "method": "POST",
+          "host": ["http://user-service:8080"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/users/{id}",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users/{id}",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://user-service:8080"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/users/{id}",
+      "method": "PUT",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users/{id}",
+          "encoding": "json",
+          "method": "PUT",
+          "host": ["http://user-service:8080"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/users/{id}",
+      "method": "DELETE",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users/{id}",
+          "encoding": "json",
+          "method": "DELETE",
+          "host": ["http://user-service:8080"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/payments",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/payments",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://payment-service:8081"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/payments",
+      "method": "POST",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/payments",
+          "encoding": "json",
+          "method": "POST",
+          "host": ["http://payment-service:8081"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/payments/{id}",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/payments/{id}",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://payment-service:8081"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/payments/user/{userId}",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/payments/user/{userId}",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://payment-service:8081"],
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/dashboard",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/users",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://user-service:8080"],
+          "group": "users",
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        },
+        {
+          "url_pattern": "/payments",
+          "encoding": "json",
+          "method": "GET",
+          "host": ["http://payment-service:8081"],
+          "group": "payments",
+          "extra_config": {
+            "backend/http": {
+              "return_error_details": "backend_alias"
+            }
+          }
+        }
+      ],
+      "extra_config": {
+        "proxy": {
+          "sequential": false
+        }
+      }
+    }
+  ]
+}
